@@ -1,0 +1,27 @@
+Shanlongchaun Gu (sg3208)
+Andrew Kallem (ajk2214)
+Sihan Wang (sw2921)
+CS 4118 - Operating Systems
+Homework 3, Programming Problems
+
+
+General Notes:
+The implementation of our system calls can be found in kernel/acceleration.c.  The associated header file is in include/linux/acceleration.h.  Our test program is located in the shaketest subdirectory in the root of the repository.
+
+
+Highlights of our implementation:
+- A linked list of events, each of which stores the acceleration motions that would trigger the event and a waitqueue
+- Each event maintains a reference count which is used to ensure that the process destroying the event does not free the memory until all processes waiting on the event have woken up
+- The waitqueue for each event serves double duty.  Normally, it holds the processes waiting on the event.  However, when accevt_destroy is called, the processes on the queue are woken up, and then that caller adds *itself* to the waitqueue, to be woken up by the last process to run at which time the reference count is zero
+- A kfifo queue to store acceleration data submitted from user space via accevt_signal
+- Our locking scheme includes a lock for the event list but not for the events themselves.  The reason is that the only mutable attributes of the event (after its creation) are themselves atomic.  In particular, the state and nr attributes are atomic_t types, and the wq attribute has its own internal lock.
+
+Our test program, shaketest, forks three processes to detect horizontal, vertical, and horizontal+vertical shakes.  We have calibrated the sensitivity so that it requires what to us is a reasonable shake to trigger the event; of course, this can easily be modified.
+
+Our user daemon, accelerationd.c, is currently set up to call only accevt_signal (Part 3 of the homework).  The call to set_acceleraton (Part 2 of the homework) is commented out in the file, but it can be uncommented to verify that we completed that part of the homework.
+
+We have run all our files through checkpatch for style.  Note, however, that some of the original accelerationd.c code throws checkpatch warnings.  We did not modify the parts of the code below the "DO NOT MODIFY BELOW THIS LINE" message, so those parts of the code will still throw checkpatch warnings.
+
+
+Citations:
+http://www.netzmafia.de/skripten/unix/linux-daemon-howto.html - Our original implementation of the daemon did not use any outside references.  However, a Piazza post from Jintak (@282) suggested consulting books and websites.  This website provided additional suggestions on creating our daemon (such as calling setsid() and closing stdout, stdin, and stderr), so we implemented those in our final version.
